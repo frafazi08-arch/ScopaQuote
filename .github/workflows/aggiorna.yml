@@ -2,7 +2,7 @@ name: Aggiorna quote
 
 on:
   schedule:
-    - cron: "7 9,16 * * *"    # 2 volte al giorno: circa 10:07 e 17:07 ora italiana (piano gratuito)
+    - cron: "7 */3 * * *"     # ogni 3 ore (ora italiana: 1, 4, 7, 10, 13, 16, 19, 22 circa)
   workflow_dispatch:          # pulsante "Run workflow" per aggiornare subito
   push:
     branches: [main]          # anche quando modifichi i file

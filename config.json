@@ -1,6 +1,6 @@
 {
   "api_key": "INCOLLA_QUI_LA_TUA_CHIAVE_ODDSPAPI",
-  "intervallo_minuti": 360,
+  "intervallo_minuti": 180,
   "giorni_avanti": 4,
   "porta_web": 8765,
   "competizioni": [
@@ -80,5 +80,6 @@
   "quota_massima": 10,
   "minimo_bookmaker": 3,
   "finestra_ore": 48,
-  "limite_richieste_mese": 240
+  "limite_richieste_mese": 240,
+  "aggiorna_quote_entro_ore": 12
 }

@@ -189,8 +189,8 @@ function disegnaStato(){
   const d = st.dati, s = d.stato || {};
   const fa = d.aggiornato ? Math.max(0, Math.round((Date.now() - new Date(d.aggiornato_utc || d.aggiornato))/60000)) : null;
   const intervallo = d.prossimo_tra_minuti || 15;
-  let prossimo = "alle 10 e alle 17";
-  if (fa!=null && fa > 60*14) s.errore = s.errore || `Nessun aggiornamento da ${fa} minuti: controlla la scheda Actions su GitHub.`;
+  let prossimo = "ogni 3 ore";
+  if (fa!=null && fa > 60*8) s.errore = s.errore || `Nessun aggiornamento da ${fa} minuti: controlla la scheda Actions su GitHub.`;
   $("#stato").innerHTML = d.aggiornato ? `
     <span>Aggiornato alle <b>${quandoLocale(d.aggiornato_utc || d.aggiornato)}</b>${fa!=null?` (${fa} min fa)`:""}</span>
     <span>Aggiornamenti: <b>${prossimo}</b></span>

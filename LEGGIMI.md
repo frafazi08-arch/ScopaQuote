@@ -1,6 +1,6 @@
 # ScopaQuote
 
-Sito che trova le quote più sbilanciate tra i bookmaker italiani (e Pinnacle) su **tiri, tiri in porta, falli commessi e falli subiti** dei giocatori. Si aggiorna da solo 2 volte al giorno su GitHub (circa alle 10 e alle 17), restando nel piano gratuito di OddsPapi. Lo apri da telefono o da PC senza tenere acceso niente.
+Sito che trova le quote più sbilanciate tra i bookmaker italiani (e Pinnacle) su **tiri, tiri in porta, falli commessi e falli subiti** dei giocatori. Si aggiorna da solo ogni 3 ore su GitHub, restando nel piano gratuito di OddsPapi. Lo apri da telefono o da PC senza tenere acceso niente.
 
 ## Metterlo online (una volta sola, circa 10 minuti)
 
@@ -26,7 +26,7 @@ All'inizio il sito mostra **dati di prova** (c'è una banda gialla che lo dice).
 
 La chiave resta segreta: non compare nel sito né nei file.
 
-> **Piano gratuito**: 250 richieste al mese. Il programma guarda solo la Serie A e solo le partite delle prossime 48 ore (i mercati su tiri e falli aprono vicino alla partita), e si ferma da solo a 240 richieste. Ogni partita costa 1 richiesta. Gli orari sono nella riga `cron` di `.github/workflows/aggiorna.yml`.
+> **Piano gratuito**: 250 richieste al mese. Ogni 3 ore il programma riscarica solo le partite di Serie A che iniziano entro 12 ore (le altre restano con le quote dell'ultimo aggiornamento) e scarica il calendario una volta al giorno. Ogni partita aggiornata costa 1 richiesta (circa 200 al mese in tutto). Si ferma da solo a 240. Gli orari sono nella riga `cron` di `.github/workflows/aggiorna.yml`.
 
 ## bet365
 Oggi OddsPapi dà le quote giocatore di bet365 ma **disattivate**, quindi il sito non le confronta. Usa la scheda **Controlla su bet365**: per ogni giocatore trovi la colonna **Conviene da**. Apri bet365, guarda la quota e scrivila nella casella: il sito ti dice subito se c'è valore.

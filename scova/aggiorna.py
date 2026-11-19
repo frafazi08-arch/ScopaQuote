@@ -74,44 +74,60 @@ def esegui(cfg, log=print):
     utili = sum(1 for v in catalogo.values() if analisi.classifica_info(v))
     log(f"Mercati tiri/falli riconosciuti nel catalogo: {utili}")
 
-    tornei = trova_tornei(api, cfg["competizioni"], log)
-    oggi = dt.date.today()
-    da, a = oggi.isoformat(), (oggi + dt.timedelta(days=cfg.get("giorni_avanti", 4))).isoformat()
     ora_utc = dt.datetime.now(dt.timezone.utc)
     adesso = ora_utc.strftime("%Y-%m-%dT%H:%M:%S")
-    entro = (ora_utc + dt.timedelta(hours=cfg.get("finestra_ore", 36))).strftime("%Y-%m-%dT%H:%M:%S")
+    entro_lista = (ora_utc + dt.timedelta(hours=cfg.get("finestra_ore", 48))).strftime("%Y-%m-%dT%H:%M:%S")
+    entro_quote = (ora_utc + dt.timedelta(hours=cfg.get("aggiorna_quote_entro_ore", 12))).strftime("%Y-%m-%dT%H:%M:%S")
 
-    partite, righe, sconosciuti, errori = {}, [], set(), []
+    # calendario: riscaricato al massimo una volta ogni 20 ore (risparmia richieste)
+    cal = (precedente or {}).get("calendario") or {}
+    cal_eta = None
+    try:
+        cal_eta = (ora_utc - dt.datetime.fromisoformat(cal.get("aggiornato", "").replace("Z", "+00:00"))).total_seconds() / 3600
+    except ValueError:
+        pass
+    elenco_partite = cal.get("partite", [])
+    errori = []
+    if cal_eta is None or cal_eta > 20 or not elenco_partite:
+        tornei = trova_tornei(api, cfg["competizioni"], log)
+        oggi = dt.date.today()
+        da, a = oggi.isoformat(), (oggi + dt.timedelta(days=cfg.get("giorni_avanti", 4))).isoformat()
+        elenco_partite = []
+        for tid, nome_torneo in tornei.items():
+            if not budget_ok():
+                continue
+            try:
+                for f in api.partite(tid, da, a):
+                    if f.get("hasOdds", True):
+                        elenco_partite.append({
+                            "id": str(f.get("fixtureId")),
+                            "nome": f"{f.get('participant1Name', '?')} - {f.get('participant2Name', '?')}",
+                            "competizione": nome_torneo,
+                            "inizio": f.get("startTime", ""),
+                        })
+            except ErroreAPI as e:
+                errori.append(f"{nome_torneo}: {e}")
+        cal = {"aggiornato": ora_utc.strftime("%Y-%m-%dT%H:%M:%SZ"), "partite": elenco_partite}
+        log(f"Calendario aggiornato: {len(elenco_partite)} partite")
+
+    future = [f for f in elenco_partite if adesso < str(f["inizio"]) <= entro_lista]
+    da_aggiornare = [f for f in future if str(f["inizio"]) <= entro_quote]
+    log(f"{len(future)} partite nelle prossime {cfg.get('finestra_ore', 48)} ore, "
+        f"{len(da_aggiornare)} da aggiornare ora (entro {cfg.get('aggiorna_quote_entro_ore', 12)} ore)")
+
+    partite, righe, sconosciuti = {}, [], set()
     saltate = 0
-    for tid, nome_torneo in tornei.items():
+    for f in sorted(da_aggiornare, key=lambda x: x["inizio"]):
         if not budget_ok():
             saltate += 1
             continue
+        partite[f["id"]] = dict(f)
         try:
-            elenco = api.partite(tid, da, a)
+            quote = api.quote(f["id"], cfg["bookmaker"])
         except ErroreAPI as e:
-            errori.append(f"{nome_torneo}: {e}")
+            errori.append(f"{f['nome']}: {e}")
             continue
-        future = [f for f in elenco if f.get("hasOdds", True) and adesso < str(f.get("startTime", "")) <= entro]
-        log(f"{nome_torneo}: {len(future)} partite nelle prossime {cfg.get('finestra_ore', 36)} ore")
-        for f in sorted(future, key=lambda x: x.get("startTime", "")):
-            fid = str(f.get("fixtureId"))
-            if not budget_ok():
-                saltate += 1
-                continue
-            partite[fid] = {
-                "id": fid,
-                "nome": f"{f.get('participant1Name', '?')} - {f.get('participant2Name', '?')}",
-                "competizione": nome_torneo,
-                "inizio": f.get("startTime", ""),
-            }
-            try:
-                quote = api.quote(fid, cfg["bookmaker"])
-            except ErroreAPI as e:
-                errori.append(f"{partite[fid]['nome']}: {e}")
-                continue
-            nuove = analisi.estrai_righe(partite[fid], quote, catalogo, sconosciuti)
-            righe.extend(nuove)
+        righe.extend(analisi.estrai_righe(partite[f["id"]], quote, catalogo, sconosciuti))
     if saltate:
         errori.insert(0, f"Limite di {limite} richieste al mese quasi raggiunto: {saltate} partite/competizioni "
                          "non aggiornate. Riparte da solo il mese prossimo (o alza limite_richieste_mese).")
@@ -121,6 +137,23 @@ def esegui(cfg, log=print):
             fh.write("\n".join(sorted(sconosciuti)))
 
     opp, arb = analisi.analizza(righe, partite, cfg, precedente)
+    rif = getattr(analisi.analizza, "riferimento", [])
+    # partite ancora future ma non riscaricate ora: tengo le quote dell'ultimo giro
+    ids_future = {f["id"] for f in future}
+    tenute = set()
+    if precedente:
+        for chiave, lista in (("opportunita", opp), ("riferimento", rif)):
+            for o in precedente.get(chiave, []):
+                fx = o["id"].split("|")[0]
+                if fx in ids_future and fx not in partite:
+                    lista.append(o)
+                    tenute.add(fx)
+    rango = {"alta": 0, "media": 1, "bassa": 2}
+    opp.sort(key=lambda o: (rango.get(o.get("affidabilita"), 2) == 2, -o["valore_pct"], -o["differenza_pct"]))
+    rif.sort(key=lambda r: -r["sopra_pct"])
+    analisi.analizza.riferimento = rif
+    if tenute:
+        log(f"{len(tenute)} partite mostrate con le quote dell'ultimo aggiornamento")
     copertura = {}
     for r in righe:
         c = copertura.setdefault(r["book"], {m: 0 for m in analisi.NOMI_MERCATO})
@@ -136,7 +169,8 @@ def esegui(cfg, log=print):
         "mese": mese,
         "richieste_mese": usate + api.richieste,
         "limite_richieste_mese": limite,
-        "partite_analizzate": len(partite),
+        "partite_analizzate": len(partite) + len(tenute),
+        "calendario": cal,
         "quote_lette": len(righe),
         "copertura_bookmaker": copertura,
         "riferimento": getattr(analisi.analizza, "riferimento", []),

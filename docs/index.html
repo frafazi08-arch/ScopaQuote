@@ -195,7 +195,7 @@ function disegnaStato(){
   $("#stato").innerHTML = d.aggiornato ? `
     <span>Aggiornato alle <b>${quandoLocale(d.aggiornato_utc || d.aggiornato)}</b>${fa!=null?` (${fa} min fa)`:""}</span>
     <span>Aggiornamenti: <b>${prossimo}</b></span>
-    <span><b>${d.partite_analizzate}</b> partite · <b>${d.quote_lette}</b> quote</span>` : "In attesa del primo aggiornamento…";
+    <span><b>${d.partite_analizzate}</b> partite · <b>${(d.riferimento||[]).length}</b> confronti con Sisal</span>` : "In attesa del primo aggiornamento…";
   let b = "";
   if (d.demo) b += `<div class="demo">⚠ DATI DI PROVA inventati, solo per vedere come funziona la pagina. Aggiungi la chiave OddsPapi nei "Secrets" del progetto GitHub per vedere le quote vere.</div>`;
   if (s.errore) b += `<div class="errore">Ultimo aggiornamento non riuscito: ${esc(s.errore)}</div>`;

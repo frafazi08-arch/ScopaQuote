@@ -350,9 +350,12 @@ function disegnaSis(){
     .sort((a,b)=> b.sopra_pct - a.sopra_pct);
   $("#n-sis").textContent = rif.filter(r=>r.sopra_pct>=10).length;
   const haB365 = rif.some(r=>r.altri.some(x=>x[0]==="bet365.it"));
-  const b365ver = rif.some(r=>r.da_verificare && r.da_verificare["bet365.it"]!==undefined);
+  const n365 = rif.filter(r=>r.altri.some(x=>x[0]==="bet365.it")).length;
+  const nver = rif.filter(r=>r.da_verificare && r.da_verificare["bet365.it"]!==undefined).length;
+  const b365ver = n365 && nver / n365 > 0.5;
   let avviso = !haB365 ? `<div class="legenda" style="margin:0 2px 10px">Per questa partita bet365 non è disponibile: usa la scheda <b>Controlla su bet365</b>.</div>`
-    : b365ver ? `<div class="legenda" style="margin:0 2px 10px">Le quote <b>bet365</b> arrivano dal piano gratuito come <span class="tagver">da verificare</span>: possono essere cambiate. Aprile sull'app bet365 prima di giocare. Per vedere solo bet365 scegli <b>Solo bet365</b> nel menu dei siti.</div>` : "";
+    : b365ver ? `<div class="legenda" style="margin:0 2px 10px">Le quote <b>bet365</b> arrivano dal piano gratuito come <span class="tagver">da verificare</span>: possono essere cambiate. Aprile sull'app bet365 prima di giocare. Per vedere solo bet365 scegli <b>Solo bet365</b> nel menu dei siti.</div>`
+    : `<div class="legenda" style="margin:0 2px 10px"><b>bet365</b> aggiornato in automatico. Per vedere solo bet365 scegli <b>Solo bet365</b> nel menu dei siti. Le poche quote con <span class="tagver">da verificare</span> vanno controllate sull'app.</div>`;
   if (!l.length){ $("#tab-sis").innerHTML = avviso + `<div class="vuoto">Nessuna quota sopra Sisal con questi filtri.</div>`; return; }
   if (window.innerWidth < 700){
     let c = avviso;

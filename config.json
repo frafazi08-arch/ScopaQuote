@@ -79,7 +79,11 @@
   "pausa_tra_richieste_secondi": 1.0,
   "quota_massima": 10,
   "minimo_bookmaker": 3,
-  "finestra_ore": 48,
+  "finestra_ore": 56,
   "limite_richieste_mese": 240,
-  "aggiorna_quote_entro_ore": 12
+  "aggiorna_quote_entro_ore": 56,
+  "quote_da_verificare": [
+    "bet365.it"
+  ],
+  "ore_max_da_verificare": 72
 }

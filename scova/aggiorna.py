@@ -127,7 +127,8 @@ def esegui(cfg, log=print):
         except ErroreAPI as e:
             errori.append(f"{f['nome']}: {e}")
             continue
-        righe.extend(analisi.estrai_righe(partite[f["id"]], quote, catalogo, sconosciuti))
+        righe.extend(analisi.estrai_righe(partite[f["id"]], quote, catalogo, sconosciuti,
+                                          cfg.get("quote_da_verificare", []), cfg.get("ore_max_da_verificare", 72)))
     if saltate:
         errori.insert(0, f"Limite di {limite} richieste al mese quasi raggiunto: {saltate} partite/competizioni "
                          "non aggiornate. Riparte da solo il mese prossimo (o alza limite_richieste_mese).")

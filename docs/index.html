@@ -68,6 +68,7 @@
   .b365in:focus{outline:none;border-color:var(--blu)}
   .ris{font-size:12.5px;white-space:nowrap}
   tr.b365 td{background:rgba(90,169,255,.07)}
+  .tagver{background:var(--giallo-bg);color:var(--giallo);border-radius:5px;padding:1px 6px;font-size:11px;font-weight:600;margin-left:4px;white-space:nowrap}
   .tag365{background:#173452;color:var(--blu);border-radius:5px;padding:1px 6px;font-size:11px;font-weight:700;margin-left:4px}
   footer{color:#6c7684;font-size:12px;text-align:center;padding:20px}
   @media (max-width:900px){ .nasc{display:none} main,header{padding-left:10px;padding-right:10px} }
@@ -321,6 +322,14 @@ function disegnaCop(){
   $("#tab-cop").innerHTML = h + `</tbody></table>`;
 }
 
+function tagVerifica(r, book){
+  const v = (r.da_verificare||{})[book];
+  if (v===undefined) return "";
+  const d = v ? new Date(v) : null;
+  const t = d && !isNaN(d) ? d.toLocaleDateString("it-IT",{weekday:"short"})+" "+d.toLocaleTimeString("it-IT",{hour:"2-digit",minute:"2-digit"}) : "";
+  return `<span class="tagver" title="Quota non confermata in tempo reale: controllala sull'app prima di giocare">da verificare${t?" · "+t:""}</span>`;
+}
+
 // ---------- Sopra Sisal ----------
 const SIS = {mercato:""};
 function disegnaSis(){
@@ -341,7 +350,9 @@ function disegnaSis(){
     .sort((a,b)=> b.sopra_pct - a.sopra_pct);
   $("#n-sis").textContent = rif.filter(r=>r.sopra_pct>=10).length;
   const haB365 = rif.some(r=>r.altri.some(x=>x[0]==="bet365.it"));
-  let avviso = haB365 ? "" : `<div class="legenda" style="margin:0 2px 10px">bet365 non arriva ancora in automatico: per bet365 usa la scheda <b>Controlla su bet365</b>.</div>`;
+  const b365ver = rif.some(r=>r.da_verificare && r.da_verificare["bet365.it"]!==undefined);
+  let avviso = !haB365 ? `<div class="legenda" style="margin:0 2px 10px">Per questa partita bet365 non è disponibile: usa la scheda <b>Controlla su bet365</b>.</div>`
+    : b365ver ? `<div class="legenda" style="margin:0 2px 10px">Le quote <b>bet365</b> arrivano dal piano gratuito come <span class="tagver">da verificare</span>: possono essere cambiate. Aprile sull'app bet365 prima di giocare. Per vedere solo bet365 scegli <b>Solo bet365</b> nel menu dei siti.</div>` : "";
   if (!l.length){ $("#tab-sis").innerHTML = avviso + `<div class="vuoto">Nessuna quota sopra Sisal con questi filtri.</div>`; return; }
   if (window.innerWidth < 700){
     let c = avviso;
@@ -351,7 +362,7 @@ function disegnaSis(){
         <div class="r1"><span class="gioc">${esc(r.giocatore)}</span><span class="pill ${r.sopra_pct>=25?"v-alto":"v-medio"}">+${r.sopra_pct.toFixed(0)}%</span></div>
         <div>${esc(r.descrizione)} <span class="book">· ${r.lato} ${r.linea}</span></div>
         <div class="r3"><span class="book">Sisal <b style="color:var(--testo)">${r.quota_rif.toFixed(2)}</b></span>
-          <span>→ <span class="quota">${r.miglior_quota.toFixed(2)}</span> <span class="book">${nb(r.miglior_book)}</span>${is365?'<span class="tag365">bet365</span>':""}</span>
+          <span>→ <span class="quota">${r.miglior_quota.toFixed(2)}</span> <span class="book">${nb(r.miglior_book)}</span>${is365?'<span class="tag365">bet365</span>':""}${tagVerifica(r, r.miglior_book)}</span>
           ${r.quota_equa?`<span class="book">giusta ${r.quota_equa}</span>`:""}</div>
         <div class="partita" style="margin-top:4px">${esc(r.partita)} · ${quando(r.inizio)}</div></div>`;
     }
@@ -366,10 +377,10 @@ function disegnaSis(){
       <td class="gioc">${esc(r.giocatore)}</td>
       <td>${esc(r.descrizione)}<div class="partita">${esc(r.mercato_nome)} ${r.lato} ${r.linea}</div></td>
       <td class="num"><span class="quota" style="color:var(--tenue)">${r.quota_rif.toFixed(2)}</span></td>
-      <td class="num"><span class="quota">${r.miglior_quota.toFixed(2)}</span><div class="book">${nb(r.miglior_book)}${is365?'<span class="tag365">bet365</span>':""}</div></td>
+      <td class="num"><span class="quota">${r.miglior_quota.toFixed(2)}</span><div class="book">${nb(r.miglior_book)}${is365?'<span class="tag365">bet365</span>':""}</div>${tagVerifica(r, r.miglior_book)}</td>
       <td class="num"><span class="pill ${r.sopra_pct>=25?"v-alto":"v-medio"}">+${r.sopra_pct.toFixed(0)}%</span></td>
       <td class="num nasc">${giusta}</td>
-      <td class="nasc book">${r.sopra.slice(1,5).map(([b,q])=>`${nb(b)} ${q.toFixed(2)}`).join(" · ")}</td></tr>`;
+      <td class="nasc book">${r.sopra.slice(1,5).map(([b,q])=>`${nb(b)}${(r.da_verificare||{})[b]!==undefined?"*":""} ${q.toFixed(2)}`).join(" · ")}</td></tr>`;
   }
   h += `</tbody></table>`;
   if (l.length>400) h += `<div class="legenda">Mostrate le prime 400 di ${l.length}.</div>`;
@@ -415,7 +426,8 @@ function disegnaB365(){
   for (const o of l.slice(0,600)){
     if (o.partita !== ultima){ ultima = o.partita; h += `<tr><td colspan="6" style="background:var(--riga);font-weight:600">${esc(o.partita)} <span class="partita">· ${esc(o.competizione)} · ${quando(o.inizio)}</span></td></tr>`; }
     const qv = salv[o.id] || "";
-    h += `<tr><td class="gioc">${esc(o.giocatore)}</td><td>${esc(o.descrizione)}</td>
+    const auto = (o.altri||[]).find(x=>x[0]==="bet365.it");
+    h += `<tr><td class="gioc">${esc(o.giocatore)}${auto?`<div class="book">bet365 (da verificare): <b>${auto[1].toFixed(2)}</b></div>`:""}</td><td>${esc(o.descrizione)}</td>
       <td class="num"><b>${o.quota_rif.toFixed(2)}</b></td><td class="num nasc">${o.quota_equa ?? "—"}</td>
       <td class="num"><input class="b365in" inputmode="decimal" data-id="${esc(o.id)}" value="${esc(qv)}" placeholder="—"></td>
       <td class="ris" data-r="${esc(o.id)}">${risultatoB365(o, parseFloat(String(qv).replace(",",".")))}</td></tr>`;

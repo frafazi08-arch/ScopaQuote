@@ -163,7 +163,16 @@ def linea_lato(nome_esito, info):
     return linea_da_nome(info["nome"], info.get("handicap")), lato
 
 
-def estrai_righe(partita, risposta_quote, catalogo, sconosciuti):
+def _ore_fa(iso):
+    import datetime as _dt
+    try:
+        t = _dt.datetime.fromisoformat(str(iso).replace("Z", "+00:00"))
+        return (_dt.datetime.now(_dt.timezone.utc) - t).total_seconds() / 3600
+    except ValueError:
+        return None
+
+
+def estrai_righe(partita, risposta_quote, catalogo, sconosciuti, inattivi_ok=(), ore_max=72):
     """partita: dict fixture. risposta_quote: JSON di /odds.
     catalogo: {marketId(str): {nome, handicap, tipo, periodo, giocatore, esiti:{id:nome}}}"""
     righe = []
@@ -186,8 +195,11 @@ def estrai_righe(partita, risposta_quote, catalogo, sconosciuti):
                 for pid, p in (esito.get("players") or {}).items():
                     if pid == "0" or not p.get("playerName"):
                         continue
-                    if not p.get("active", True):
-                        continue
+                    inattiva = not p.get("active", True)
+                    if inattiva:
+                        eta = _ore_fa(p.get("changedAt"))
+                        if book not in inattivi_ok or eta is None or eta > ore_max:
+                            continue
                     try:
                         prezzo = float(p.get("price"))
                     except (TypeError, ValueError):
@@ -204,6 +216,7 @@ def estrai_righe(partita, risposta_quote, catalogo, sconosciuti):
                         "quota": prezzo,
                         "link": p.get("betslip"),
                         "aggiornata": p.get("changedAt"),
+                        "inattiva": inattiva,
                     })
     return righe
 
@@ -236,7 +249,12 @@ def analizza(righe, partite, cfg, precedente=None):
     # 2) indice: (partita, giocatore, mercato, linea) -> lato -> book -> quota
     idx = defaultdict(lambda: {"over": {}, "under": {}})
     link = {}
+    da_verificare = {}  # (chiave, lato, book) -> ora ultimo aggiornamento
     for r in righe:
+        if r.get("inattiva"):
+            k = (r["fixture"], r["giocatore"], r["mercato"], r["linea"])
+            da_verificare[(k, r["lato"], r["book"])] = (r["quota"], r.get("aggiornata"))
+            continue
         k = (r["fixture"], r["giocatore"], r["mercato"], r["linea"])
         attuale = idx[k][r["lato"]].get(r["book"])
         if attuale is None or r["quota"] > attuale:
@@ -254,7 +272,12 @@ def analizza(righe, partite, cfg, precedente=None):
         fx, giocatore, mercato, linea = k
         p = partite.get(fx, {})
         for lato in ("over", "under"):
-            quote = lati[lato]
+            quote = dict(lati[lato])
+            verificare = {}
+            for (kk, ll, b), (q, quando) in da_verificare.items():
+                if kk == k and ll == lato and b not in quote:
+                    quote[b] = q
+                    verificare[b] = quando
             q_rif = quote.get(riferimento_book)
             if not q_rif:
                 continue
@@ -274,6 +297,7 @@ def analizza(righe, partite, cfg, precedente=None):
                 "sopra": sopra,
                 "miglior_book": top_b, "miglior_quota": top_q,
                 "sopra_pct": round((top_q / q_rif - 1) * 100, 1) if top_q else 0.0,
+                "da_verificare": verificare,
             })
     riferimento.sort(key=lambda r: -r["sopra_pct"])
 

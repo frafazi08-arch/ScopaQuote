@@ -20,7 +20,8 @@
   .demo{background:var(--giallo-bg);color:var(--giallo);padding:9px 24px;font-size:13px;border-bottom:1px solid #5a4a1c}
   .errore{background:#3a1717;color:#ffb3b3;padding:9px 24px;font-size:13px}
   main{padding:16px 24px 40px;max-width:1500px;margin:0 auto}
-  .schede{display:flex;gap:6px;margin-bottom:14px}
+  .schede{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px}
+  .scheda{white-space:nowrap;flex:0 0 auto}
   .scheda{background:none;border:1px solid var(--bordo);color:var(--tenue);padding:7px 14px;border-radius:8px;cursor:pointer;font-size:14px}
   .scheda.attiva{background:var(--pannello);color:var(--testo);border-color:#3d4652}
   .scheda .n{background:var(--riga);border-radius:10px;padding:1px 7px;margin-left:6px;font-size:12px}
@@ -188,11 +189,11 @@ function disegnaStato(){
   const d = st.dati, s = d.stato || {};
   const fa = d.aggiornato ? Math.max(0, Math.round((Date.now() - new Date(d.aggiornato_utc || d.aggiornato))/60000)) : null;
   const intervallo = d.prossimo_tra_minuti || 15;
-  let prossimo = fa==null ? "—" : fa < intervallo ? "tra circa "+(intervallo-fa)+" min" : "a momenti";
-  if (fa!=null && fa > intervallo*4) s.errore = s.errore || `Nessun aggiornamento da ${fa} minuti: controlla la scheda Actions su GitHub.`;
+  let prossimo = "alle 10 e alle 17";
+  if (fa!=null && fa > 60*14) s.errore = s.errore || `Nessun aggiornamento da ${fa} minuti: controlla la scheda Actions su GitHub.`;
   $("#stato").innerHTML = d.aggiornato ? `
     <span>Aggiornato alle <b>${quandoLocale(d.aggiornato_utc || d.aggiornato)}</b>${fa!=null?` (${fa} min fa)`:""}</span>
-    <span>Prossimo: <b>${prossimo}</b></span>
+    <span>Aggiornamenti: <b>${prossimo}</b></span>
     <span><b>${d.partite_analizzate}</b> partite · <b>${d.quote_lette}</b> quote</span>` : "In attesa del primo aggiornamento…";
   let b = "";
   if (d.demo) b += `<div class="demo">⚠ DATI DI PROVA inventati, solo per vedere come funziona la pagina. Aggiungi la chiave OddsPapi nei "Secrets" del progetto GitHub per vedere le quote vere.</div>`;
@@ -342,6 +343,21 @@ function disegnaSis(){
   const haB365 = rif.some(r=>r.altri.some(x=>x[0]==="bet365.it"));
   let avviso = haB365 ? "" : `<div class="legenda" style="margin:0 2px 10px">bet365 non arriva ancora in automatico: per bet365 usa la scheda <b>Controlla su bet365</b>.</div>`;
   if (!l.length){ $("#tab-sis").innerHTML = avviso + `<div class="vuoto">Nessuna quota sopra Sisal con questi filtri.</div>`; return; }
+  if (window.innerWidth < 700){
+    let c = avviso;
+    for (const r of l.slice(0,200)){
+      const is365 = r.miglior_book==="bet365.it";
+      c += `<div class="card" style="cursor:default${is365?";border-color:#2a5a8a":""}">
+        <div class="r1"><span class="gioc">${esc(r.giocatore)}</span><span class="pill ${r.sopra_pct>=25?"v-alto":"v-medio"}">+${r.sopra_pct.toFixed(0)}%</span></div>
+        <div>${esc(r.descrizione)} <span class="book">· ${r.lato} ${r.linea}</span></div>
+        <div class="r3"><span class="book">Sisal <b style="color:var(--testo)">${r.quota_rif.toFixed(2)}</b></span>
+          <span>→ <span class="quota">${r.miglior_quota.toFixed(2)}</span> <span class="book">${nb(r.miglior_book)}</span>${is365?'<span class="tag365">bet365</span>':""}</span>
+          ${r.quota_equa?`<span class="book">giusta ${r.quota_equa}</span>`:""}</div>
+        <div class="partita" style="margin-top:4px">${esc(r.partita)} · ${quando(r.inizio)}</div></div>`;
+    }
+    if (l.length>200) c += `<div class="legenda">Mostrate le prime 200 di ${l.length}.</div>`;
+    $("#tab-sis").innerHTML = c; return;
+  }
   let h = avviso + `<table><thead><tr><th>Partita</th><th>Giocatore</th><th>Scommessa</th><th class="num">Sisal</th><th class="num">Quota più alta</th><th class="num">Sopra Sisal</th><th class="num nasc">Quota giusta</th><th class="nasc">Altri siti sopra Sisal</th></tr></thead><tbody>`;
   for (const r of l.slice(0,400)){
     const is365 = r.miglior_book==="bet365.it";
@@ -442,7 +458,7 @@ document.querySelectorAll(".scheda").forEach(b=>b.onclick=()=>{
   document.querySelectorAll(".scheda").forEach(x=>x.classList.remove("attiva")); b.classList.add("attiva");
   ["sis","opp","b365","arb","cop"].forEach(s=>$("#s-"+s).hidden = s!==b.dataset.s);
 });
-let _w = window.innerWidth < 700; window.addEventListener("resize",()=>{ const w = window.innerWidth < 700; if (w!==_w){ _w=w; disegnaOpp(); } });
+let _w = window.innerWidth < 700; window.addEventListener("resize",()=>{ const w = window.innerWidth < 700; if (w!==_w){ _w=w; disegnaOpp(); disegnaSis(); } });
 carica(); setInterval(carica, 60000);
 document.addEventListener("visibilitychange",()=>{ if(!document.hidden) carica(); });
 </script>

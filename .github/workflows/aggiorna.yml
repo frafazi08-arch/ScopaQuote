@@ -39,6 +39,7 @@ jobs:
       - name: Scarica e analizza le quote
         env:
           ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
         run: python aggiorna_sito.py
 
       - uses: actions/configure-pages@v5

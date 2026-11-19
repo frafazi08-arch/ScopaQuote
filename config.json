@@ -85,5 +85,7 @@
   "quote_da_verificare": [
     "bet365.it"
   ],
-  "ore_max_da_verificare": 72
+  "ore_max_da_verificare": 72,
+  "apify_campionato": "italy-serie-a",
+  "limite_spesa_apify_usd": 4.0
 }

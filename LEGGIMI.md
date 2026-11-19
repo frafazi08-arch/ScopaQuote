@@ -29,7 +29,9 @@ La chiave resta segreta: non compare nel sito né nei file.
 > **Piano gratuito**: 250 richieste al mese. Ogni 3 ore il programma riscarica solo le partite di Serie A che iniziano entro 12 ore (le altre restano con le quote dell'ultimo aggiornamento) e scarica il calendario una volta al giorno. Ogni partita aggiornata costa 1 richiesta (circa 200 al mese in tutto). Si ferma da solo a 240. Gli orari sono nella riga `cron` di `.github/workflows/aggiorna.yml`.
 
 ## bet365
-Oggi OddsPapi dà le quote giocatore di bet365 ma **disattivate**, quindi il sito non le confronta. Usa la scheda **Controlla su bet365**: per ogni giocatore trovi la colonna **Conviene da**. Apri bet365, guarda la quota e scrivila nella casella: il sito ti dice subito se c'è valore.
+Le quote bet365 (tiri, tiri in porta, falli commessi, falli subiti) arrivano da **Apify** (piano gratuito: $5 di credito al mese, nessuna carta). Ogni partita aggiornata costa circa $0,01: con gli aggiornamenti ogni 3 ore si spendono circa $2 al mese. Il programma si ferma da solo a $4.
+Serve il segreto `APIFY_TOKEN` (Settings → Secrets and variables → Actions), con il token Apify che inizia con `apify_api_`.
+Se Apify non è attivo, il sito usa le quote bet365 "da verificare" di OddsPapi (meno aggiornate).
 
 ## Come leggere il sito
 

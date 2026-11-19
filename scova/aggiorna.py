@@ -6,6 +6,7 @@ import time
 
 from . import analisi
 from .oddspapi import OddsPapi, ErroreAPI, trova_tornei
+from . import apify_bet365
 
 CARTELLA_DATI = os.path.join(os.path.dirname(os.path.dirname(__file__)), "dati")
 FILE_ULTIMO = os.path.join(CARTELLA_DATI, "ultimo.json")
@@ -129,6 +130,46 @@ def esegui(cfg, log=print):
             continue
         righe.extend(analisi.estrai_righe(partite[f["id"]], quote, catalogo, sconosciuti,
                                           cfg.get("quote_da_verificare", []), cfg.get("ore_max_da_verificare", 72)))
+    # ---- bet365 tramite Apify (se c'è il token) ----
+    token_apify = (cfg.get("apify_token") or "").strip()
+    prec_ap = (precedente or {}).get("apify") or {}
+    spesa = prec_ap.get("spesa_usd", 0.0) if prec_ap.get("mese") == mese else 0.0
+    limite_ap = float(cfg.get("limite_spesa_apify_usd", 4.0))
+    cal365 = prec_ap.get("calendario") or {}
+    bet365_ok = 0
+    if token_apify and da_aggiornare:
+        try:
+            eta365 = None
+            try:
+                eta365 = (ora_utc - dt.datetime.fromisoformat(cal365.get("aggiornato", "").replace("Z", "+00:00"))).total_seconds() / 3600
+            except ValueError:
+                pass
+            partite365 = cal365.get("partite") or []
+            serve_elenco = eta365 is None or eta365 > 20 or any(
+                apify_bet365.abbina(partite365, f) is None for f in da_aggiornare)
+            if serve_elenco and spesa + apify_bet365.COSTO_ELENCO <= limite_ap:
+                partite365 = apify_bet365.elenco_partite(token_apify, cfg.get("apify_campionato", "italy-serie-a"))
+                spesa += apify_bet365.COSTO_ELENCO
+                cal365 = {"aggiornato": ora_utc.strftime("%Y-%m-%dT%H:%M:%SZ"), "partite": partite365}
+            for f in da_aggiornare:
+                m = apify_bet365.abbina(partite365, f)
+                if not m:
+                    continue
+                if spesa + apify_bet365.COSTO_PARTITA > limite_ap:
+                    errori.insert(0, f"Credito Apify del mese quasi finito (${spesa:.2f} su ${limite_ap:.2f}): "
+                                     "bet365 riparte il mese prossimo.")
+                    break
+                nuove = apify_bet365.righe_partita(token_apify, m["match_id"], f["id"])
+                spesa += apify_bet365.COSTO_PARTITA
+                partite.setdefault(f["id"], dict(f))
+                righe.extend(nuove)
+                bet365_ok += 1
+            log(f"bet365 (Apify): {bet365_ok} partite, spesa del mese ${spesa:.2f}")
+        except apify_bet365.ErroreApify as e:
+            errori.append(f"bet365: {e}")
+    apify_stato = {"mese": mese, "spesa_usd": round(spesa, 3), "limite_usd": limite_ap,
+                   "calendario": cal365, "attivo": bool(token_apify)}
+
     if saltate:
         errori.insert(0, f"Limite di {limite} richieste al mese quasi raggiunto: {saltate} partite/competizioni "
                          "non aggiornate. Riparte da solo il mese prossimo (o alza limite_richieste_mese).")
@@ -172,6 +213,7 @@ def esegui(cfg, log=print):
         "limite_richieste_mese": limite,
         "partite_analizzate": len(partite) + len(tenute),
         "calendario": cal,
+        "apify": apify_stato,
         "quote_lette": len(righe),
         "copertura_bookmaker": copertura,
         "riferimento": getattr(analisi.analizza, "riferimento", []),

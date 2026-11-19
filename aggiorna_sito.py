@@ -18,6 +18,8 @@ def main():
     chiave = os.environ.get("ODDSPAPI_KEY", "").strip()
     if chiave:
         cfg["api_key"] = chiave
+    if os.environ.get("APIFY_TOKEN", "").strip():
+        cfg["apify_token"] = os.environ["APIFY_TOKEN"].strip()
 
     if aggiorna.chiave_valida(cfg):
         risultato = aggiorna.esegui(cfg)

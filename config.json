@@ -1,0 +1,84 @@
+{
+  "api_key": "INCOLLA_QUI_LA_TUA_CHIAVE_ODDSPAPI",
+  "intervallo_minuti": 360,
+  "giorni_avanti": 4,
+  "porta_web": 8765,
+  "competizioni": [
+    {
+      "nome": "Serie A",
+      "paese": "Italy",
+      "id": 23
+    },
+    {
+      "nome": "Premier League",
+      "paese": "England",
+      "id": null,
+      "attiva": false
+    },
+    {
+      "nome": "LaLiga",
+      "paese": "Spain",
+      "id": null,
+      "attiva": false
+    },
+    {
+      "nome": "Bundesliga",
+      "paese": "Germany",
+      "id": null,
+      "attiva": false
+    },
+    {
+      "nome": "Ligue 1",
+      "paese": "France",
+      "id": null,
+      "attiva": false
+    },
+    {
+      "nome": "UEFA Champions League",
+      "paese": "International Clubs",
+      "id": null,
+      "attiva": false
+    },
+    {
+      "nome": "UEFA Europa League",
+      "paese": "International Clubs",
+      "id": null,
+      "attiva": false
+    }
+  ],
+  "bookmaker": [
+    "sisal.it",
+    "eurobet.it",
+    "admiralbet.it",
+    "netbet.it",
+    "bet365.it",
+    "snai.it",
+    "pokerstars.it",
+    "goldbet.it",
+    "pinnacle"
+  ],
+  "riferimento": "sisal.it",
+  "bookmaker_precisi": [
+    "pinnacle"
+  ],
+  "cloni": {
+    "snai.it": "sisal.it",
+    "pokerstars.it": "sisal.it",
+    "lottomatica.it": "goldbet.it",
+    "betflag.it": "goldbet.it",
+    "planetwin365.it": "goldbet.it"
+  },
+  "mercati": [
+    "tiri",
+    "tiri_in_porta",
+    "falli_commessi",
+    "falli_subiti"
+  ],
+  "soglia_valore_percento": 5,
+  "soglia_differenza_percento": 10,
+  "pausa_tra_richieste_secondi": 1.0,
+  "quota_massima": 10,
+  "minimo_bookmaker": 3,
+  "finestra_ore": 48,
+  "limite_richieste_mese": 240
+}

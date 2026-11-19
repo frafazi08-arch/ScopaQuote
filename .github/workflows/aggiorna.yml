@@ -1,0 +1,49 @@
+name: Aggiorna quote
+
+on:
+  schedule:
+    - cron: "7 9,16 * * *"    # 2 volte al giorno: circa 10:07 e 17:07 ora italiana (piano gratuito)
+  workflow_dispatch:          # pulsante "Run workflow" per aggiornare subito
+  push:
+    branches: [main]          # anche quando modifichi i file
+    paths-ignore: ["**.md"]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  aggiorna:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Recupera i dati precedenti (per le frecce di variazione)
+        run: |
+          mkdir -p dati
+          curl -sf "https://${{ github.repository_owner }}.github.io/${{ github.event.repository.name }}/dati.json" -o dati/ultimo.json || rm -f dati/ultimo.json
+
+      - name: Scarica e analizza le quote
+        env:
+          ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
+        run: python aggiorna_sito.py
+
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+      - id: deploy
+        uses: actions/deploy-pages@v4
